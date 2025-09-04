@@ -80,8 +80,7 @@ pip install pyautogui pynput psutil sv_ttk tkcalendar
 Contributions are welcome! Please fork the repository and submit a pull request with your changes.
 
 ## License
-GPL v3
-This project is open-source and available under the MIT License.
+GPL 3.
 
 ## Contact
 
