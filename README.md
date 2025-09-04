@@ -1,10 +1,10 @@
 # NickClick - Auto Keyboard and Mouse Clicker
 
-**Automate repetitive mouse and keyboard tasks with a user-friendly GUI.**
+**Automate repetitive mouse and keyboard tasks with a user-friendly GUI for Windows.**
 
 ## Description
 
-NickClick is a Python application designed to automate mouse clicks, keyboard inputs, and delays. It allows users to record, edit, save, and schedule macros for repetitive tasks, improving productivity and reducing manual effort. The application features a graphical user interface (GUI) built with tkinter, making it accessible to both technical and non-technical users.
+NickClick is a Python application designed to automate mouse clicks, keyboard inputs, and delays on Windows machines. It allows users to record, edit, save, and schedule macros for repetitive tasks, improving productivity and reducing manual effort. The application features a graphical user interface (GUI) built with tkinter, making it accessible to both technical and non-technical users.
 
 > **Note:** This project description was written by Mistral AI.
 
