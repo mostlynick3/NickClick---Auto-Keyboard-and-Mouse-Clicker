@@ -794,61 +794,67 @@ class AutomationGUI:
        self.load_scheduled_tasks()
 
    def execute_scheduled_task(self, task):
-       def execute():
-           original_actions = self.actions.copy()
-           self.actions = task['actions']
-           
-           self.script_running = True
-           self.run_btn.configure(state=tk.DISABLED)
-           self.stop_btn.configure(state=tk.NORMAL)
-           
-           try:
-               for rep in range(task['repetitions']):
-                   if self.stop_script:
-                       break
-                   for action in self.actions:
-                       if self.stop_script:
-                           break
-                       if action["type"] == "click":
-                           time.sleep(action["delay"] / 1000.0)
-                           button = action.get("button", "left")
-                           if button == "double":
-                               pyautogui.doubleClick(action["x"], action["y"])
-                           else:
-                               pyautogui.click(action["x"], action["y"], button=button)
-                       elif action["type"] == "key":
-                           time.sleep(action["delay"] / 1000.0)
-                           key = action["key"]
-                           if len(key) == 1 and ord(key) < 32:
-                               ctrl_keys = {
-                                   '\u0003': ['ctrl', 'c'],
-                                   '\u0016': ['ctrl', 'v'],
-                                   '\u0001': ['ctrl', 'a'],
-                                   '\u0018': ['ctrl', 'x'],
-                                   '\u001A': ['ctrl', 'z'],
-                               }
-                               if key in ctrl_keys:
-                                   pyautogui.hotkey(*ctrl_keys[key])
-                               else:
-                                   pyautogui.press('enter' if key == '\n' else key)
-                           elif "+" in key:
-                               keys = [k.strip().lower() for k in key.split("+")]
-                               pyautogui.hotkey(*keys)
-                           else:
-                               pyautogui.press(key.lower())
-                       elif action["type"] == "delay":
-                           time.sleep(action["delay"] / 1000.0)
-           finally:
-               self.actions = original_actions
-               self.script_running = False
-               self.run_btn.configure(state=tk.NORMAL)
-               self.stop_btn.configure(state=tk.DISABLED)
-               
-               if not self.stop_script:
-                   self.root.after(0, lambda: messagebox.showinfo("Scheduled Execution", "Scheduled script execution completed"))
-       
-       threading.Thread(target=execute, daemon=True).start()
-
+        def execute():
+            original_actions = self.actions.copy()
+            self.actions = task['actions']
+            
+            self.script_running = True
+            self.run_btn.configure(state=tk.DISABLED)
+            self.stop_btn.configure(state=tk.NORMAL)
+            
+            try:
+                for rep in range(task['repetitions']):
+                    if self.stop_script:
+                        break
+                    for action in self.actions:
+                        if self.stop_script:
+                            break
+                        if action["type"] == "click":
+                            time.sleep(action["delay"] / 1000.0)
+                            button = action.get("button", "left")
+                            if button == "double":
+                                pyautogui.doubleClick(action["x"], action["y"])
+                            elif button == "scroll_up":
+                                scroll_amount = action.get("scroll_amount", 1)
+                                pyautogui.scroll(scroll_amount, x=action["x"], y=action["y"])
+                            elif button == "scroll_down":
+                                scroll_amount = action.get("scroll_amount", 1)
+                                pyautogui.scroll(-scroll_amount, x=action["x"], y=action["y"])
+                            else:
+                                pyautogui.click(action["x"], action["y"], button=button)
+                        elif action["type"] == "key":
+                            time.sleep(action["delay"] / 1000.0)
+                            key = action["key"]
+                            if len(key) == 1 and ord(key) < 32:
+                                ctrl_keys = {
+                                    '\u0003': ['ctrl', 'c'],
+                                    '\u0016': ['ctrl', 'v'],
+                                    '\u0001': ['ctrl', 'a'],
+                                    '\u0018': ['ctrl', 'x'],
+                                    '\u001A': ['ctrl', 'z'],
+                                }
+                                if key in ctrl_keys:
+                                    pyautogui.hotkey(*ctrl_keys[key])
+                                else:
+                                    pyautogui.press('enter' if key == '\n' else key)
+                            elif "+" in key:
+                                keys = [k.strip().lower() for k in key.split("+")]
+                                pyautogui.hotkey(*keys)
+                            else:
+                                pyautogui.press(key.lower())
+                        elif action["type"] == "delay":
+                            time.sleep(action["delay"] / 1000.0)
+            finally:
+                self.actions = original_actions
+                self.script_running = False
+                self.run_btn.configure(state=tk.NORMAL)
+                self.stop_btn.configure(state=tk.DISABLED)
+                
+                if not self.stop_script:
+                    self.root.after(0, lambda: messagebox.showinfo("Scheduled Execution", "Scheduled script execution completed"))
+        
+        threading.Thread(target=execute, daemon=True).start()
+        
    def rebuild_file_menu(self):
        self.file_menu.delete(0, 'end')
 
@@ -900,28 +906,33 @@ class AutomationGUI:
        self.tree.bind("<Double-1>", self.on_double_click)
 
    def setup_bottom_controls(self):
-       bottom_frame = ttk.Frame(self.root)
-       bottom_frame.grid(row=2, column=0, sticky=(tk.W, tk.E), padx=5, pady=5)
-       left_frame = ttk.Frame(bottom_frame)
-       left_frame.pack(side=tk.LEFT)
-       self.editable_var = tk.BooleanVar(value=True)
-       ttk.Checkbutton(left_frame, text="Editable", variable=self.editable_var, command=self.toggle_editable).pack(side=tk.LEFT)
-       middle_frame = ttk.Frame(bottom_frame)
-       middle_frame.pack(side=tk.LEFT, padx=20)
-       self.move_up_btn = ttk.Button(middle_frame, text="Move Up", command=self.move_up)
-       self.move_up_btn.pack(side=tk.LEFT, padx=(0, 5))
-       self.move_down_btn = ttk.Button(middle_frame, text="Move Down", command=self.move_down)
-       self.move_down_btn.pack(side=tk.LEFT, padx=(0, 5))
-       self.delay_adjust_btn = ttk.Button(middle_frame, text="Delay adjustment", command=self.show_delay_adjust_dialog)
-       self.delay_adjust_btn.pack(side=tk.LEFT, padx=(0, 5))
-       right_frame = ttk.Frame(bottom_frame)
-       right_frame.pack(side=tk.RIGHT)
-       self.add_btn = ttk.Button(right_frame, text="Add Action", command=self.show_add_dialog)
-       self.add_btn.pack(side=tk.LEFT, padx=(0, 5))
-       self.delete_btn = ttk.Button(right_frame, text="Delete Selected", command=self.delete_action)
-       self.delete_btn.pack(side=tk.LEFT, padx=(0, 5))
-       self.clear_btn = ttk.Button(right_frame, text="Clear All", command=self.clear_actions)
-       self.clear_btn.pack(side=tk.LEFT)
+        bottom_frame = ttk.Frame(self.root)
+        bottom_frame.grid(row=2, column=0, sticky=(tk.W, tk.E), padx=5, pady=5)
+        
+        left_frame = ttk.Frame(bottom_frame)
+        left_frame.pack(side=tk.LEFT)
+        self.editable_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(left_frame, text="Editable", variable=self.editable_var, command=self.toggle_editable).pack(side=tk.LEFT)
+        
+        middle_frame = ttk.Frame(bottom_frame)
+        middle_frame.pack(side=tk.LEFT, padx=20)
+        self.move_up_btn = ttk.Button(middle_frame, text="Move Up", command=self.move_up)
+        self.move_up_btn.pack(side=tk.LEFT, padx=(0, 5))
+        self.move_down_btn = ttk.Button(middle_frame, text="Move Down", command=self.move_down)
+        self.move_down_btn.pack(side=tk.LEFT, padx=(0, 5))
+        self.delay_adjust_btn = ttk.Button(middle_frame, text="Delay adjustment", command=self.show_delay_adjust_dialog)
+        self.delay_adjust_btn.pack(side=tk.LEFT, padx=(0, 5))
+        
+        right_frame = ttk.Frame(bottom_frame)
+        right_frame.pack(side=tk.RIGHT)
+        self.copy_btn = ttk.Button(right_frame, text="Copy Action", command=self.copy_action)
+        self.copy_btn.pack(side=tk.LEFT, padx=(0, 5))
+        self.add_btn = ttk.Button(right_frame, text="Add Action", command=self.show_add_dialog)
+        self.add_btn.pack(side=tk.LEFT, padx=(0, 5))
+        self.delete_btn = ttk.Button(right_frame, text="Delete Selected", command=self.delete_action)
+        self.delete_btn.pack(side=tk.LEFT, padx=(0, 5))
+        self.clear_btn = ttk.Button(right_frame, text="Clear All", command=self.clear_actions)
+        self.clear_btn.pack(side=tk.LEFT)
 
    def show_delay_adjust_dialog(self):
        if self.check_no_actions_loaded():
@@ -958,64 +969,99 @@ class AutomationGUI:
            self.edit_cell(item, column)
 
    def edit_cell(self, item, column):
-       index = int(self.tree.item(item, "text")) - 1
-       action = self.actions[index]
-       x, y, width, height = self.tree.bbox(item, column)
-       entry = tk.Entry(self.tree)
-       entry.place(x=x, y=y, width=width, height=height)
-       if column == '#1':
-           if action["type"] == "click":
-               entry.insert(0, "Mouse Click")
-           elif action["type"] == "key":
-               entry.insert(0, "Keyboard Input")
-           elif action["type"] == "delay":
-               entry.insert(0, "Delay")
-       elif column == '#2':
-           if action["type"] == "click":
-               entry.insert(0, f"({action['x']}, {action['y']}) - {action.get('button', 'left')} click")
-           elif action["type"] == "key":
-               entry.insert(0, self.format_key(action["key"]))
-           elif action["type"] == "delay":
-               entry.insert(0, f"{action['delay']}ms")
-       elif column == '#3':
-           if action["type"] != "delay":
-               entry.insert(0, str(action["delay"]))
-       def save_edit():
-           new_value = entry.get()
-           if column == '#2':
-               if action["type"] == "key":
-                   action["key"] = new_value
-               elif action["type"] == "click":
-                   try:
-                       parts = new_value.split(" - ")
-                       coords = parts[0].strip("()")
-                       x, y = map(int, coords.split(", "))
-                       button = parts[1].split(" ")[0] if len(parts) > 1 else "left"
-                       action["x"] = x
-                       action["y"] = y
-                       action["button"] = button
-                   except:
-                       pass
-               elif action["type"] == "delay":
-                   try:
-                       action["delay"] = int(new_value.replace("ms", ""))
-                   except:
-                       pass
-           elif column == '#3' and action["type"] != "delay":
-               try:
-                   action["delay"] = int(new_value)
-               except:
-                   pass
-           self.update_tree()
-           entry.destroy()
-       def cancel_edit():
-           entry.destroy()
-       entry.bind('<Return>', lambda e: save_edit())
-       entry.bind('<Escape>', lambda e: cancel_edit())
-       entry.bind('<FocusOut>', lambda e: save_edit())
-       entry.focus_set()
-       entry.select_range(0, tk.END)
-
+        index = int(self.tree.item(item, "text")) - 1
+        action = self.actions[index]
+        x, y, width, height = self.tree.bbox(item, column)
+        entry = tk.Entry(self.tree)
+        entry.place(x=x, y=y, width=width, height=height)
+        
+        if column == '#1':
+            if action["type"] == "click":
+                entry.insert(0, "Mouse Click")
+            elif action["type"] == "key":
+                entry.insert(0, "Keyboard Input")
+            elif action["type"] == "delay":
+                entry.insert(0, "Delay")
+        elif column == '#2':
+            if action["type"] == "click":
+                button_type = action.get("button", "left")
+                if button_type == "scroll_up":
+                    scroll_amount = action.get("scroll_amount", 1)
+                    entry.insert(0, f"({action['x']}, {action['y']}) - scroll up ({scroll_amount} clicks)")
+                elif button_type == "scroll_down":
+                    scroll_amount = action.get("scroll_amount", 1)
+                    entry.insert(0, f"({action['x']}, {action['y']}) - scroll down ({scroll_amount} clicks)")
+                else:
+                    entry.insert(0, f"({action['x']}, {action['y']}) - {button_type} click")
+            elif action["type"] == "key":
+                entry.insert(0, self.format_key(action["key"]))
+            elif action["type"] == "delay":
+                entry.insert(0, f"{action['delay']}ms")
+        elif column == '#3':
+            if action["type"] != "delay":
+                entry.insert(0, str(action["delay"]))
+                
+        def save_edit():
+            new_value = entry.get()
+            if column == '#2':
+                if action["type"] == "key":
+                    action["key"] = new_value
+                elif action["type"] == "click":
+                    try:
+                        parts = new_value.split(" - ")
+                        coords = parts[0].strip("()")
+                        x, y = map(int, coords.split(", "))
+                        
+                        if len(parts) > 1:
+                            action_desc = parts[1]
+                            if "scroll up" in action_desc:
+                                button = "scroll_up"
+                                if "(" in action_desc and ")" in action_desc:
+                                    try:
+                                        amount_str = action_desc.split("(")[1].split(")")[0].replace("clicks", "").strip()
+                                        action["scroll_amount"] = int(amount_str)
+                                    except:
+                                        action["scroll_amount"] = 1
+                            elif "scroll down" in action_desc:
+                                button = "scroll_down"
+                                if "(" in action_desc and ")" in action_desc:
+                                    try:
+                                        amount_str = action_desc.split("(")[1].split(")")[0].replace("clicks", "").strip()
+                                        action["scroll_amount"] = int(amount_str)
+                                    except:
+                                        action["scroll_amount"] = 1
+                            else:
+                                button = action_desc.split(" ")[0]
+                        else:
+                            button = "left"
+                        
+                        action["x"] = x
+                        action["y"] = y
+                        action["button"] = button
+                    except:
+                        pass
+                elif action["type"] == "delay":
+                    try:
+                        action["delay"] = int(new_value.replace("ms", ""))
+                    except:
+                        pass
+            elif column == '#3' and action["type"] != "delay":
+                try:
+                    action["delay"] = int(new_value)
+                except:
+                    pass
+            self.update_tree()
+            entry.destroy()
+            
+        def cancel_edit():
+            entry.destroy()
+            
+        entry.bind('<Return>', lambda e: save_edit())
+        entry.bind('<Escape>', lambda e: cancel_edit())
+        entry.bind('<FocusOut>', lambda e: save_edit())
+        entry.focus_set()
+        entry.select_range(0, tk.END)
+    
    def move_up(self):
        if self.check_no_actions_loaded():
            return
@@ -1091,61 +1137,96 @@ class AutomationGUI:
        ttk.Button(button_frame, text="Delay", command=lambda: self.show_delay_dialog(dialog)).pack(side=tk.LEFT, padx=10)
 
    def show_mouse_dialog(self, parent):
-       parent.destroy()
-       dialog = tk.Toplevel(self.root)
-       dialog.title("Mouse Click Action")
-       self.center_window(dialog, 350, 300)
-       dialog.resizable(False, False)
-       dialog.transient(self.root)
-       dialog.grab_set()
+        parent.destroy()
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Mouse Click Action")
+        self.center_window(dialog, 350, 350)
+        dialog.resizable(False, False)
+        dialog.transient(self.root)
+        dialog.grab_set()
 
-       main_frame = ttk.Frame(dialog)
-       main_frame.pack(expand=True, fill='both', padx=20, pady=20)
+        main_frame = ttk.Frame(dialog)
+        main_frame.pack(expand=True, fill='both', padx=20, pady=20)
 
-       main_frame.grid_columnconfigure(0, weight=1)
-       main_frame.grid_columnconfigure(1, weight=1)
+        main_frame.grid_columnconfigure(0, weight=1)
+        main_frame.grid_columnconfigure(1, weight=1)
 
-       ttk.Button(main_frame, text="Select Position On Screen",
-                  command=lambda: self.select_position_dialog(x_var, y_var, dialog)).grid(
-                  row=0, column=0, columnspan=2, pady=(0, 15), sticky='ew')
+        ttk.Button(main_frame, text="Select Position On Screen",
+                   command=lambda: self.select_position_dialog(x_var, y_var, dialog)).grid(
+                   row=0, column=0, columnspan=2, pady=(0, 15), sticky='ew')
 
-       ttk.Label(main_frame, text="X Position:").grid(row=1, column=0, sticky=tk.E, padx=(0, 10), pady=5)
-       x_var = tk.StringVar()
-       ttk.Entry(main_frame, textvariable=x_var, width=15).grid(row=1, column=1, sticky=tk.W, pady=5)
+        ttk.Label(main_frame, text="X Position:").grid(row=1, column=0, sticky=tk.E, padx=(0, 10), pady=5)
+        x_var = tk.StringVar()
+        ttk.Entry(main_frame, textvariable=x_var, width=15).grid(row=1, column=1, sticky=tk.W, pady=5)
 
-       ttk.Label(main_frame, text="Y Position:").grid(row=2, column=0, sticky=tk.E, padx=(0, 10), pady=5)
-       y_var = tk.StringVar()
-       ttk.Entry(main_frame, textvariable=y_var, width=15).grid(row=2, column=1, sticky=tk.W, pady=5)
+        ttk.Label(main_frame, text="Y Position:").grid(row=2, column=0, sticky=tk.E, padx=(0, 10), pady=5)
+        y_var = tk.StringVar()
+        ttk.Entry(main_frame, textvariable=y_var, width=15).grid(row=2, column=1, sticky=tk.W, pady=5)
 
-       ttk.Label(main_frame, text="Click Type:").grid(row=3, column=0, sticky=tk.E, padx=(0, 10), pady=5)
-       click_type = ttk.Combobox(main_frame, values=["Left Click", "Double Click", "Right Click", "Middle Click"],
-                                 state="readonly", width=12)
-       click_type.grid(row=3, column=1, sticky=tk.W, pady=5)
-       click_type.set("Left Click")
+        ttk.Label(main_frame, text="Click Type:").grid(row=3, column=0, sticky=tk.E, padx=(0, 10), pady=5)
+        click_type = ttk.Combobox(main_frame, values=["Left Click", "Double Click", "Right Click", "Middle Click", "Scroll Up", "Scroll Down"],
+                                  state="readonly", width=12)
+        click_type.grid(row=3, column=1, sticky=tk.W, pady=5)
+        click_type.set("Left Click")
 
-       ttk.Label(main_frame, text="Delay (ms):").grid(row=4, column=0, sticky=tk.E, padx=(0, 10), pady=5)
-       delay_var = tk.StringVar(value="100")
-       ttk.Entry(main_frame, textvariable=delay_var, width=15).grid(row=4, column=1, sticky=tk.W, pady=5)
+        scroll_label = ttk.Label(main_frame, text="Scroll Amount:")
+        scroll_var = tk.StringVar(value="3")
+        scroll_entry = ttk.Entry(main_frame, textvariable=scroll_var, width=15)
+        
+        def on_click_type_change(*args):
+            if click_type.get() in ["Scroll Up", "Scroll Down"]:
+                scroll_label.grid(row=4, column=0, sticky=tk.E, padx=(0, 10), pady=5)
+                scroll_entry.grid(row=4, column=1, sticky=tk.W, pady=5)
+                delay_label.grid(row=5, column=0, sticky=tk.E, padx=(0, 10), pady=5)
+                delay_entry.grid(row=5, column=1, sticky=tk.W, pady=5)
+                add_button.grid(row=6, column=0, columnspan=2, pady=(15, 0), sticky='ew')
+            else:
+                scroll_label.grid_remove()
+                scroll_entry.grid_remove()
+                delay_label.grid(row=4, column=0, sticky=tk.E, padx=(0, 10), pady=5)
+                delay_entry.grid(row=4, column=1, sticky=tk.W, pady=5)
+                add_button.grid(row=5, column=0, columnspan=2, pady=(15, 0), sticky='ew')
 
-       def add_mouse_action():
-           try:
-               x = int(x_var.get()) if x_var.get() else 0
-               y = int(y_var.get()) if y_var.get() else 0
-               delay = int(delay_var.get()) if delay_var.get() else 100
-               click_map = {"Left Click": "left", "Double Click": "double", "Right Click": "right", "Middle Click": "middle"}
-               action = {"type": "click", "x": x, "y": y, "button": click_map[click_type.get()], "delay": delay}
-               self.actions.append(action)
-               self.unsaved_changes = True
-               self.update_tree(scroll_to_bottom=True)
-               self.update_window_title()
-               self.update_tree()
-               dialog.destroy()
-           except ValueError:
-               messagebox.showerror("Error", "Invalid values entered")
+        click_type.bind('<<ComboboxSelected>>', on_click_type_change)
 
-       ttk.Button(main_frame, text="Add", command=add_mouse_action).grid(
-           row=5, column=0, columnspan=2, pady=(15, 0), sticky='ew')
+        delay_label = ttk.Label(main_frame, text="Delay (ms):")
+        delay_label.grid(row=4, column=0, sticky=tk.E, padx=(0, 10), pady=5)
+        delay_var = tk.StringVar(value="100")
+        delay_entry = ttk.Entry(main_frame, textvariable=delay_var, width=15)
+        delay_entry.grid(row=4, column=1, sticky=tk.W, pady=5)
 
+        def add_mouse_action():
+            try:
+                x = int(x_var.get()) if x_var.get() else 0
+                y = int(y_var.get()) if y_var.get() else 0
+                delay = int(delay_var.get()) if delay_var.get() else 100
+                
+                click_map = {
+                    "Left Click": "left", 
+                    "Double Click": "double", 
+                    "Right Click": "right", 
+                    "Middle Click": "middle",
+                    "Scroll Up": "scroll_up",
+                    "Scroll Down": "scroll_down"
+                }
+                
+                action = {"type": "click", "x": x, "y": y, "button": click_map[click_type.get()], "delay": delay}
+                
+                if click_type.get() in ["Scroll Up", "Scroll Down"]:
+                    scroll_amount = int(scroll_var.get()) if scroll_var.get() else 3
+                    action["scroll_amount"] = scroll_amount
+                
+                self.actions.append(action)
+                self.unsaved_changes = True
+                self.update_tree(scroll_to_bottom=True)
+                self.update_window_title()
+                dialog.destroy()
+            except ValueError:
+                messagebox.showerror("Error", "Invalid values entered")
+
+        add_button = ttk.Button(main_frame, text="Add", command=add_mouse_action)
+        add_button.grid(row=5, column=0, columnspan=2, pady=(15, 0), sticky='ew')
+    
    def show_keyboard_dialog(self, parent):
        parent.destroy()
        dialog = tk.Toplevel(self.root)
@@ -1311,27 +1392,33 @@ class AutomationGUI:
        self.root.title(''.join(title_parts))
        
    def update_tree(self, scroll_to_bottom=False):
-       for item in self.tree.get_children():
-           self.tree.delete(item)
+        for item in self.tree.get_children():
+            self.tree.delete(item)
 
-       for i, action in enumerate(self.actions):
-           if action["type"] == "click":
-               button_type = action.get("button", "left")
-               details = f"({action['x']}, {action['y']}) - {button_type} click"
-               self.tree.insert("", "end", text=str(i+1), values=("Mouse Click", details, action["delay"]))
-           elif action["type"] == "key":
-               self.tree.insert("", "end", text=str(i+1), values=("Keyboard Input", self.format_key(action["key"]), action["delay"]))
-           elif action["type"] == "delay":
-               self.tree.insert("", "end", text=str(i+1), values=("Delay", f"{action['delay']}ms", ""))
+        for i, action in enumerate(self.actions):
+            if action["type"] == "click":
+                button_type = action.get("button", "left")
+                if button_type == "scroll_up":
+                    scroll_amount = action.get("scroll_amount", 1)
+                    details = f"({action['x']}, {action['y']}) - scroll up ({scroll_amount} clicks)"
+                elif button_type == "scroll_down":
+                    scroll_amount = action.get("scroll_amount", 1)
+                    details = f"({action['x']}, {action['y']}) - scroll down ({scroll_amount} clicks)"
+                else:
+                    details = f"({action['x']}, {action['y']}) - {button_type} click"
+                self.tree.insert("", "end", text=str(i+1), values=("Mouse Click", details, action["delay"]))
+            elif action["type"] == "key":
+                self.tree.insert("", "end", text=str(i+1), values=("Keyboard Input", self.format_key(action["key"]), action["delay"]))
+            elif action["type"] == "delay":
+                self.tree.insert("", "end", text=str(i+1), values=("Delay", f"{action['delay']}ms", ""))
 
-       if scroll_to_bottom and self.actions:
-           children = self.tree.get_children()
+        if scroll_to_bottom and self.actions:
+            children = self.tree.get_children()
+            if children:
+                self.tree.see(children[-1])
 
-           if children:
-               self.tree.see(children[-1])
-
-       self.setup_empty_state()
-
+        self.setup_empty_state()
+    
    def delete_action(self):
        if self.check_no_actions_loaded():
            return
@@ -1583,18 +1670,41 @@ class AutomationGUI:
        except Exception as e:
            messagebox.showerror("Error", f"Failed to unlock script: {str(e)}")
            self.editable_var.set(False)
-
+   def copy_action(self):
+        if self.check_no_actions_loaded():
+            return
+        if not self.editable_var.get():
+            return
+        selected = self.tree.selection()
+        if not selected:
+            self.missing_selection()
+            return
+        
+        item = selected[0]
+        index = int(self.tree.item(item, "text")) - 1
+        action_to_copy = self.actions[index].copy()
+        
+        self.actions.insert(index + 1, action_to_copy)
+        self.unsaved_changes = True
+        self.update_tree()
+        self.update_window_title()
+        
+        new_item = self.tree.get_children()[index + 1]
+        self.tree.selection_set(new_item)
+        self.tree.see(new_item)
+    
    def update_ui_editable_state(self):
-       self.editable = self.editable_var.get()
-       state = tk.NORMAL if self.editable else tk.DISABLED
-       self.add_btn.configure(state=state)
-       if not self.recording:
-           self.record_btn.configure(state=state)
-       self.delete_btn.configure(state=state)
-       self.clear_btn.configure(state=state)
-       self.move_up_btn.configure(state=state)
-       self.move_down_btn.configure(state=state)
-       self.delay_adjust_btn.configure(state=state)
+        self.editable = self.editable_var.get()
+        state = tk.NORMAL if self.editable else tk.DISABLED
+        self.copy_btn.configure(state=state)
+        self.add_btn.configure(state=state)
+        if not self.recording:
+            self.record_btn.configure(state=state)
+        self.delete_btn.configure(state=state)
+        self.clear_btn.configure(state=state)
+        self.move_up_btn.configure(state=state)
+        self.move_down_btn.configure(state=state)
+        self.delay_adjust_btn.configure(state=state)
 
    def setup_recording(self):
        self.recorded_actions = []
@@ -1632,24 +1742,37 @@ class AutomationGUI:
        threading.Thread(target=wait_for_key, daemon=True).start()
 
    def begin_recording(self):
-       self.recording = True
-       self.recorded_actions.clear()
-       self.last_time = time.time()
-       self.record_btn.configure(state=tk.DISABLED)
-       self.stop_record_btn.configure(state=tk.NORMAL)
-       messagebox.showinfo("Recording", f"Recording started! Press {self.record_key} again to stop.")
-       self.mouse_listener = mouse.Listener(on_click=self.on_record_click)
-       self.key_listener = pynput_keyboard.Listener(on_press=self.on_record_key)
-       self.mouse_listener.start()
-       self.key_listener.start()
+        self.recording = True
+        self.recorded_actions.clear()
+        self.last_time = time.time()
+        self.record_btn.configure(state=tk.DISABLED)
+        self.stop_record_btn.configure(state=tk.NORMAL)
+        messagebox.showinfo("Recording", f"Recording started! Press {self.record_key} again to stop.")
+        self.mouse_listener = mouse.Listener(on_click=self.on_record_click, on_scroll=self.on_record_scroll)
+        self.key_listener = pynput_keyboard.Listener(on_press=self.on_record_key)
+        self.mouse_listener.start()
+        self.key_listener.start()
 
    def on_record_click(self, x, y, button, pressed):
-       if self.recording and pressed:
-           current_time = time.time()
-           delay = int((current_time - self.last_time) * 1000) if self.last_time > 0 else 0
-           button_name = str(button).replace('Button.', '').lower()
-           self.recorded_actions.append({"type": "click", "x": x, "y": y, "button": button_name, "delay": delay})
-           self.last_time = current_time
+        if self.recording and pressed:
+            current_time = time.time()
+            delay = int((current_time - self.last_time) * 1000) if self.last_time > 0 else 0
+            button_name = str(button).replace('Button.', '').lower()
+            self.recorded_actions.append({"type": "click", "x": x, "y": y, "button": button_name, "delay": delay})
+            self.last_time = current_time
+
+
+   def on_record_scroll(self, x, y, dx, dy):
+        if self.recording:
+            current_time = time.time()
+            delay = int((current_time - self.last_time) * 1000) if self.last_time > 0 else 0
+            
+            if dy > 0:
+                self.recorded_actions.append({"type": "click", "x": x, "y": y, "button": "scroll_up", "delay": delay, "scroll_amount": abs(dy)})
+            elif dy < 0:
+                self.recorded_actions.append({"type": "click", "x": x, "y": y, "button": "scroll_down", "delay": delay, "scroll_amount": abs(dy)})
+            
+            self.last_time = current_time
 
    def on_record_key(self, key):
        if self.recording:
@@ -1779,77 +1902,90 @@ class AutomationGUI:
        update_countdown()
 
    def start_script_execution(self, dialog, reps):
-       self.countdown_active = False
-       dialog.destroy()
-       self.script_running = True
-       self.update_window_title()
-       self.stop_script = False
-       self.run_btn.configure(state=tk.DISABLED)
-       self.stop_btn.configure(state=tk.NORMAL)
-       def execute():
-           def monitor_hotkey():
-               while self.script_running:
-                   if keyboard.is_pressed(self.selected_hotkey.lower()):
-                       self.stop_script = True
-                       break
-                   time.sleep(0.1)
-           hotkey_thread = threading.Thread(target=monitor_hotkey, daemon=True)
-           hotkey_thread.start()
-           rep_count = 0
-           while (reps == 0 or rep_count < reps) and not self.stop_script:
-               for action in self.actions:
-                   if self.stop_script:
-                       break
-                   if action["type"] == "click":
-                       time.sleep(action["delay"] / 1000.0)
-                       button = action.get("button", "left")
-                       if button == "double":
-                           pyautogui.doubleClick(action["x"], action["y"])
-                       else:
-                           pyautogui.click(action["x"], action["y"], button=button)
-                   elif action["type"] == "key":
-                       time.sleep(action["delay"] / 1000.0)
-                       key = action["key"]
-                       if len(key) == 1 and ord(key) < 32:
-                           ctrl_keys = {
-                               '\u0003': ['ctrl', 'c'],
-                               '\u0016': ['ctrl', 'v'],
-                               '\u0001': ['ctrl', 'a'],
-                               '\u0018': ['ctrl', 'x'],
-                               '\u001A': ['ctrl', 'z'],
-                           }
-                           if key in ctrl_keys:
-                               pyautogui.hotkey(*ctrl_keys[key])
-                           else:
-                               pyautogui.press('enter' if key == '\n' else key)
-                       elif "+" in key:
-                           keys = [k.strip().lower() for k in key.split("+")]
-                           pyautogui.hotkey(*keys)
-                       else:
-                           pyautogui.press(key.lower())
-                   elif action["type"] == "delay":
-                       time.sleep(action["delay"] / 1000.0)
-               rep_count += 1
-           self.script_running = False
-           self.update_window_title()
-           self.run_btn.configure(state=tk.NORMAL)
-           self.stop_btn.configure(state=tk.DISABLED)
-           if self.stop_script:
-               dialog = tk.Toplevel(self.root)
-               dialog.title("Script Stopped")
-               dialog.resizable(False, False)
-               self.center_window(dialog, 300, 150)
-               dialog.transient(self.root)
-               dialog.grab_set()
-               dialog.focus_force()
-               frame = ttk.Frame(dialog)
-               frame.pack(expand=True)
-               ttk.Label(frame, text="Script execution stopped", font=("Arial", 12), justify="center").pack(pady=20)
-               ttk.Button(frame, text="OK", command=dialog.destroy).pack(pady=10)
-           if not self.stop_script:
-               self.show_completion_notification()
-       threading.Thread(target=execute, daemon=True).start()
-
+        self.countdown_active = False
+        dialog.destroy()
+        self.script_running = True
+        self.update_window_title()
+        self.stop_script = False
+        self.run_btn.configure(state=tk.DISABLED)
+        self.stop_btn.configure(state=tk.NORMAL)
+        
+        def execute():
+            def monitor_hotkey():
+                while self.script_running:
+                    if keyboard.is_pressed(self.selected_hotkey.lower()):
+                        self.stop_script = True
+                        break
+                    time.sleep(0.1)
+            
+            hotkey_thread = threading.Thread(target=monitor_hotkey, daemon=True)
+            hotkey_thread.start()
+            
+            rep_count = 0
+            while (reps == 0 or rep_count < reps) and not self.stop_script:
+                for action in self.actions:
+                    if self.stop_script:
+                        break
+                    if action["type"] == "click":
+                        time.sleep(action["delay"] / 1000.0)
+                        button = action.get("button", "left")
+                        if button == "double":
+                            pyautogui.doubleClick(action["x"], action["y"])
+                        elif button == "scroll_up":
+                            scroll_amount = action.get("scroll_amount", 1)
+                            pyautogui.scroll(scroll_amount, x=action["x"], y=action["y"])
+                        elif button == "scroll_down":
+                            scroll_amount = action.get("scroll_amount", 1)
+                            pyautogui.scroll(-scroll_amount, x=action["x"], y=action["y"])
+                        else:
+                            pyautogui.click(action["x"], action["y"], button=button)
+                    elif action["type"] == "key":
+                        time.sleep(action["delay"] / 1000.0)
+                        key = action["key"]
+                        if len(key) == 1 and ord(key) < 32:
+                            ctrl_keys = {
+                                '\u0003': ['ctrl', 'c'],
+                                '\u0016': ['ctrl', 'v'],
+                                '\u0001': ['ctrl', 'a'],
+                                '\u0018': ['ctrl', 'x'],
+                                '\u001A': ['ctrl', 'z'],
+                            }
+                            if key in ctrl_keys:
+                                pyautogui.hotkey(*ctrl_keys[key])
+                            else:
+                                pyautogui.press('enter' if key == '\n' else key)
+                        elif "+" in key:
+                            keys = [k.strip().lower() for k in key.split("+")]
+                            pyautogui.hotkey(*keys)
+                        else:
+                            pyautogui.press(key.lower())
+                    elif action["type"] == "delay":
+                        time.sleep(action["delay"] / 1000.0)
+                rep_count += 1
+            
+            self.script_running = False
+            self.update_window_title()
+            self.run_btn.configure(state=tk.NORMAL)
+            self.stop_btn.configure(state=tk.DISABLED)
+            
+            if self.stop_script:
+                dialog = tk.Toplevel(self.root)
+                dialog.title("Script Stopped")
+                dialog.resizable(False, False)
+                self.center_window(dialog, 300, 150)
+                dialog.transient(self.root)
+                dialog.grab_set()
+                dialog.focus_force()
+                frame = ttk.Frame(dialog)
+                frame.pack(expand=True)
+                ttk.Label(frame, text="Script execution stopped", font=("Arial", 12), justify="center").pack(pady=20)
+                ttk.Button(frame, text="OK", command=dialog.destroy).pack(pady=10)
+            
+            if not self.stop_script:
+                self.show_completion_notification()
+        
+        threading.Thread(target=execute, daemon=True).start()
+    
    def stop_script_execution(self):
        self.stop_script = True
 
