@@ -1316,23 +1316,43 @@ class AutomationGUI:
        dialog.focus_set()
 
    def select_position_dialog(self, x_var, y_var, dialog):
-       dialog.withdraw()
-       messagebox.showinfo("Position Selection", "Click anywhere on screen to capture position. Press ESC to cancel.")
-       def on_click(x, y, button, pressed):
-           if pressed:
-               x_var.set(str(x))
-               y_var.set(str(y))
-               dialog.deiconify()
-               return False
-       def on_key(key):
-           if key == pynput_keyboard.Key.esc:
-               dialog.deiconify()
-               return False
-       mouse_listener = mouse.Listener(on_click=on_click)
-       key_listener = pynput_keyboard.Listener(on_press=on_key)
-       mouse_listener.start()
-       key_listener.start()
+        dialog.withdraw()
+        messagebox.showinfo("Position Selection", "Click anywhere on screen to capture position. Press ESC to cancel.")
 
+        def restore_windows():
+            self.root.deiconify()
+            self.root.lift()
+            self.root.focus_force()
+            self.root.attributes('-topmost', True)
+            
+            dialog.deiconify()
+            dialog.lift()
+            dialog.focus_force()
+            dialog.attributes('-topmost', True)
+            dialog.grab_set()
+            
+            self.root.after(100, lambda: (
+                self.root.attributes('-topmost', False),
+                dialog.attributes('-topmost', False)
+            ))
+
+        def on_click(x, y, button, pressed):
+            if pressed:
+                x_var.set(str(x))
+                y_var.set(str(y))
+                self.root.after(50, restore_windows)
+                return False
+
+        def on_key(key):
+            if key == pynput_keyboard.Key.esc:
+                self.root.after(50, restore_windows)
+                return False
+
+        mouse_listener = mouse.Listener(on_click=on_click)
+        key_listener = pynput_keyboard.Listener(on_press=on_key)
+        mouse_listener.start()
+        key_listener.start()
+        
    def setup_empty_state(self):
        if hasattr(self, 'empty_frame'):
            self.empty_frame.destroy()
